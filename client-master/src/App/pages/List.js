@@ -39,7 +39,7 @@ class List extends Component {
         this.onSpeedChange = this.onSpeedChange.bind(this);
 
         this.state = {
-            deadzone: 0.08,
+            deadzone: 0.02,
             speed: 127,
             sensitivity:0.5, 
             out_data: "",
@@ -77,7 +77,7 @@ class List extends Component {
         console.log(`Gamepad ${gamepadIndex} disconnected !`)
     }
     onSpeedChange(value) {
-        this.setState({ speed: value * 127 / 100 });
+        this.setState({ speed: value * 127 / 100 }); //normalize the speed from a 1-100 percentage to 1-127 speed 
 
     }
     onSensitivityChange(value){
@@ -134,13 +134,31 @@ class List extends Component {
             this.setState({
                 rsy: value * 127 / 10
             });
-        if (axisName === "LeftStickX")
-            this.setState({
-                lsx: (this.state.sensitivity*(Math.pow(value,3)) + (1-this.state.sensitivity)*value) * 127
-            });
+        if (axisName === "LeftStickX"){
+            /*var xtest = value * 127;
+             if (Math.abs(xtest) > this.state.speed) { //if speed exceeds the set max, set the speed to the given maximum
+                 if (value < -10)
+                     this.setState({
+                         lsx: this.state.speed * -1
+                     });
+                 else if (value > 10)
+                     this.setState({
+                         lsx: this.state.speed
+                     });
+             }
+             else
+                 this.setState({
+                     //lsx: value * 127
+
+                        lsx: (this.state.sensitivity*(Math.pow(value,3)) + (1-this.state.sensitivity)*value) * 127 //adding the variable sensitivity to x values
+                 });*/
+                 this.setState({
+                    lsx: this.state.speed * value
+                });
+         }
         if (axisName === "LeftStickY") {
            var test = value * 127;
-            if (Math.abs(test) > this.state.speed) { //if speed exceeds the set max, set the speed to the given maximum
+           /* if (Math.abs(test) > this.state.speed) { //if speed exceeds the set max, set the speed to the given maximum
                 if (value < 0)
                     this.setState({
                         lsy: this.state.speed * -1
@@ -153,6 +171,9 @@ class List extends Component {
             else
                 this.setState({
                     lsy: value * 127
+                });*/
+                this.setState({
+                    lsy: this.state.speed * value
                 });
         }
 
@@ -211,12 +232,25 @@ class List extends Component {
     }
     // Start timer on page load
     componentDidMount() {
+        this.updateHome();
         this.interval = setInterval(() => this.tick(), 100);
     }
 
     componentWillUnmount() {
         clearInterval(this.interval);
     }
+
+    updateHome = () => {
+        var out = 2+","+0;
+        fetch('/api/home', { //The remaining url of the localhost:5000 server.
+            method: 'post',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                data: out,
+            }),
+        })
+    };
+
     // Send data to the server. We round so that we dont send the 15 trailing decimals.
     sendData = () => {
         var out = Math.round(this.state.lsx) + "," + Math.round(this.state.lsy)  + "," + Math.round(this.state.rsy) * 10 + "," + this.state.rt + "," + this.state.dpad + "," + this.state.a_button + "," + this.state.rb + "," + this.state.lb + "," + Math.round(this.state.seconds * 10);
