@@ -69,7 +69,8 @@ encoderFinish2 = 0
 def preCalcEnc(enc,feet):
     inches = feet*12
 
-    endLoc = 2.5*3.14159*inches*2400+enc
+   # endLoc = 2.5*3.14159*inches*2400+enc
+    endLoc = ((inches*2400)/(2.5*3.14159)) +enc
 
     return endLoc
 

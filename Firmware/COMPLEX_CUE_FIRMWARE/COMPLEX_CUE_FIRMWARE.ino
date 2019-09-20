@@ -10,6 +10,7 @@
 
 //Software Serial Setup------------------------------------
 #include <SoftwareSerial.h>
+
 SoftwareSerial SWSerial(5,4); // Available software serial pins
 
 //Motor Controller-------------------------
@@ -394,28 +395,19 @@ void cueControlMode(){
 void cueControlMode(){
   //Serial.println("cue control");
   readEncoders();
-  encoder2Reading = -1*encoder2Reading;
+  encoder1Reading = -1*encoder1Reading;
   if(digitalRead(buttonPin)==HIGH){
     p.println(-1);
-    p.println(encoder1Reading);
-    p.println(encoder2Reading);
-    Serial.println(encoder1Reading);
-    Serial.println(encoder2Reading);
+    //p.println(encoder1Reading);
+    //p.println(encoder2Reading);
+    //Serial.println(encoder1Reading);
+    //Serial.println(encoder2Reading);
     goFlag = true;
     //Serial.println("hit button!");
     switch1 = true;
   }
-  if(switch1){
-   getNextNum();
-   switch1=false;
-  }
+  
   if(goFlag){
-    //getNextNum();
-    p.println(encoder1Reading);
-    p.println(encoder2Reading);
-    Serial.println(encoder1Reading);
-    Serial.println(encoder2Reading);
-    //while(!p.available()){
       if(p.available()){
      //bridge stuff
       int rightWheel = getNextNum();
@@ -426,15 +418,30 @@ void cueControlMode(){
       Serial.println(leftWheel);
       //drive stuff
       digitalWrite(brake, HIGH);
-      ST1.motor(1,rightWheel);
-      ST1.motor(2,leftWheel * -1);
+      ST1.motor(1,rightWheel *-1);
+      ST1.motor(2,leftWheel);
       if(rightWheel==0 && leftWheel==0){
         goFlag = false;
         digitalWrite(brake, LOW);
       }
     }
-    //}
-    
+  }
+  if(switch1 && goFlag){
+    p.println(encoder1Reading);
+    p.println(encoder2Reading);
+    p.println(encoder1Reading);
+    p.println(encoder2Reading);
+    Serial.println(encoder1Reading);
+    Serial.println(encoder2Reading);
+    Serial.println(encoder1Reading);
+    Serial.println(encoder2Reading);
+    switch1=false;
+  }
+  else if (!switch1 && goFlag){
+    p.println(encoder1Reading);
+    p.println(encoder2Reading);
+    Serial.println(encoder1Reading);
+    Serial.println(encoder2Reading);
   }
 }
 /*
