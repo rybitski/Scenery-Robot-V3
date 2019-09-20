@@ -25,7 +25,11 @@ app.get('/api/getList', (req, res) => {
 app.post('/api/home', function (req, res) {
     homedata = req.body.data;
     res.send(req.body.data)
-    console.log("Data = " + homedata);
+    console.log("Home vals = " + homedata);
+    console.log("joe");
+    var fs = require('browserify-fs');
+   
+
 })
 //Cue page where the list is loaded
 app.post('/api/cue', function (req, res) {

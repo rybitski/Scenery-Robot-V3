@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import { Tabs, Tab, Button } from 'react-bootstrap';
 
 class Cue extends Component {
     // Initialize the state
@@ -64,15 +65,17 @@ class Cue extends Component {
     //What will render on the client page
     render() {
 
-        return (
+        return (                //implement back cue
             <div className="App">
-            
-                <button onClick={this.handleNextCue}>Next</button>
-                <button onClick={this.handleLoadCues}>Load</button>
+                <Button variant="warning">Back</Button> 
+                <Button variant="success" onClick={this.handleNextCue}>Next</Button>
+                
 
             </div>
         );
     }
+    /*<button onClick={this.handleNextCue}>Next</button>
+    <button onClick={this.handleLoadCues}>Load</button>*/
 
 }
 
