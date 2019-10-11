@@ -22,6 +22,7 @@ Good things to know about communication with the Arduino environment:
 import sys
 import requests
 import math
+import json
 sys.path.insert(0, '/usr/lib/python2.7/bridge')
 from time import sleep
 from bridgeclient import BridgeClient as bridgeclient
@@ -261,6 +262,19 @@ def handleRunningCue():
         runningCue = False
         stop = [-5]
         sendCommand(stop)
+
+#Parse Json data into defined stageVector and stageCue data structures
+def parseJson(source):
+    cuesList = []
+    jsonDict = json.loads(source)
+    for key in jsonDict.keys():
+        if key != "robots":
+            cue = stageVector(int(key))
+            for item in jsonDict[key]:
+                vector = stageVector(item[0], item[1], item[2], item[3], item[4])
+                cue.appendVector(vector)
+            cuesList.append(cue)
+    return cuesList
 
 #MAIN CONTROL ALGORITHM----------------------------------------------------
 lastCompletedCueNum = 0
