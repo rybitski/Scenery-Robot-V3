@@ -6,30 +6,37 @@
 #include <FirmataParser.h>
 
 //FIRMWARE FOR UVA STAGE ROBOT
-//REMOTE CONTROL MODE
 
 //Software Serial Setup------------------------------------
 #include <SoftwareSerial.h>
 
 SoftwareSerial SWSerial(5,4); // Available software serial pins
 
+
+
 //Motor Controller-------------------------
 #include <Sabertooth.h>
-Sabertooth ST1(128, SWSerial);        //Sabertooth 2x60 Drive Motors
+       //Sabertooth 2x60 Drive Motors
 Sabertooth Lift(130, SWSerial);        //SyRen 25 Lift Motor
 
-//Encoder Buffer---------------------------
-#include <SPI.h>
-#include <Encoder_Buffer.h>
+//KANG---------
+#include <Kangaroo.h>
+KangarooSerial  K(SWSerial);
+KangarooChannel K1(K, '1');
+KangarooChannel K2(K, '2');
+//Sabertooth ST1(128, SWSerial); 
 
-#define EncoderCS1 7        //Slave Select for encoder1
-#define EncoderCS2 8        //Slave Select for encoder2
+//Encoder Buffer---------------------------
+//#include <SPI.h>
+
+//#define EncoderCS1 7        //Slave Select for encoder1
+//#define EncoderCS2 8        //Slave Select for encoder2
 
 long encoder1Reading = 0;
 long encoder2Reading = 0;
 
-Encoder_Buffer Encoder1(EncoderCS1);
-Encoder_Buffer Encoder2(EncoderCS2);
+//Encoder_Buffer Encoder1(EncoderCS1);
+//Encoder_Buffer Encoder2(EncoderCS2);
 
 //I/O----------------------------------------
 int voltagePin = A0;      //voltage divider to monitor battery state
@@ -62,6 +69,10 @@ int buttonPin = 12;
 bool switch1 = false;
 
 bool goFlag = false;
+
+int destination = 0;
+int velocity = 0;
+
 //Linux Support ---------------------------------- 
 #include <Bridge.h>
 #include <stdio.h>
@@ -91,12 +102,10 @@ void setup() {
   
   SWSerial.begin(2400);             //start sabertooth with software serial
   Sabertooth::autobaud(SWSerial);
-  
 
-  //Encoder------------------
-  SPI.begin();
-  Encoder1.initEncoder();
-  Encoder2.initEncoder();
+  //KANG------
+  K1.start();
+  K2.start();
 
   //LED----------------------
   pinMode(ledR, OUTPUT);
@@ -155,7 +164,7 @@ void loop() {
       
     }
     else if(commandCode==3){  //manual control mode
-      manualMode();
+      //manualMode();
     }
     else if(commandCode==4){  //cue control mode
       cueControlMode();
@@ -171,26 +180,13 @@ void loop() {
 
 
 void readEncoders() {
-  encoder1Reading = Encoder1.readEncoder();         //Read Encoder
-  encoder2Reading = Encoder2.readEncoder();           //Read Encoder
+  //encoder1Reading = Encoder1.readEncoder();         //Read Encoder
+  //encoder2Reading = Encoder2.readEncoder();           //Read Encoder
   //Encoder1.clearEncoderCount();                 // Clear Encoder
+  encoder1Reading = K1.getP().value();
+  encoder2Reading = K2.getP().value();
 }
 
-//-----------------Check Voltage----------------------------------------------------------------
-void checkVoltage() {
-  /* Charge|Voltage|ADC
-      100%  25.6V   905
-       75%  25.2V   891
-       50%  24.6V   870
-       25%  24.0V   849
-  */
-
-  int voltage;
-  voltage = analogRead(voltagePin);
-  voltage = constrain(voltage, 833, 905);
-  chargeLevel = map(voltage, 833, 905, 0, 100);
-  // Serial.println(chargeLevel);
-}
 
 //-----------------Estop Status----------------------------------------------------------------
 void estopStatus() {
@@ -199,46 +195,6 @@ void estopStatus() {
   }
   else {
     eStopFlag = true;
-  }
-}
-
-//-----------------Lift Position----------------------------------------------------------------
-void liftPosition() {
-  /*
-     750 = fully extended
-     269 = fully detracted
-     2 inch maximum stroke
-  */
-  int posL;
-  posL = analogRead(liftFeedback);
-  samplesL++;
-  posL = constrain(posL, 269, 750);
-  posL = map(posL, 750, 269, 0, 200);
-  if (posL < averageL + 30 || posL > averageL - 30) {
-
-    averageL = averageL + posL;
-    if (samplesL > 7) {
-      liftPos = averageL / samplesL;
-      samplesL = 0;
-      averageL = 0;
-    }
-  }
-}
-
-//-----------------Lift Move----------------------------------------------------------------
-void liftMove() {
-  if (liftPos > target - offset && liftPos < target + offset) {
-    Lift.motor(0);
-  }
-  else {
-    if (liftPos < target) {
-      Lift.motor(-40);
-    }
-
-    else if (liftPos > target) {
-      Lift.motor(40);
-    }
-
   }
 }
 
@@ -269,130 +225,29 @@ bool updateCMDCode(){
 
 //-------------------CONTROL MODE SUBROUTINES---------------------------------------------
 
-void manualMode(){
-  //initialize control values to implicit zeros
-  int rightX = 0;
-  int rightY = 0;
-  int leftY = 0;
-  int rightTrigger = 0;
-  int dPad = 0;
-  int aButton = 0;
-  int rightBumper = 0;
-  int leftBumper = 0;
-  
-  //If we are not in an e-stop condition
-  if(eStopFlag == false){ //TODO---> strip out because this is redundant
-    // GET the values from the python script----------------------------
-    if(p.available()){
-      rightX = getNextNum();
-      Serial.print("rightX: ");
-      Serial.println(rightX);
-  
-      rightY = getNextNum();
-      Serial.print("rightY: ");
-      Serial.println(rightY);
-  
-      leftY = getNextNum();
-      Serial.print("leftY: ");
-      Serial.println(leftY);
-  
-      rightTrigger = getNextNum();
-      Serial.print("rightTrigger: ");
-      Serial.println(rightTrigger);
-  
-      dPad = getNextNum();
-      Serial.print("dPad: ");
-      Serial.println(dPad);
-  
-      aButton = getNextNum();
-      Serial.print("aButton: ");
-      Serial.println(aButton);
-  
-      rightBumper = getNextNum();
-      Serial.print("rightBumper: ");
-      Serial.println(rightBumper);
-  
-      leftBumper = getNextNum();
-      Serial.print("leftBumper: ");
-      Serial.println(leftBumper);
-    }
-
-    //if the bumbers are both pressed, explicit break
-    if(leftBumper == 1 && rightBumper == 1){
-      digitalWrite(brake, LOW);  //remove power to the brakes to engage them.
-      ST1.motor(1,0);
-      ST1.motor(2,0);
-      Serial.println("break condition");
-    }
-    //otherwise, if we have the right trigger down, execute drive
-    else if (rightTrigger == 1){
-      digitalWrite(brake, HIGH);  //send power to the brakes to disengauge them.
-        ST1.turn(rightY);
-        ST1.drive(rightX);
-        Serial.println("drive condition");
-    }
-    //if neither, if aButton is down, execute a lift operation from dPad data
-    else if(aButton ==1){
-      Serial.println("lift condition");
-      if(dPad==1){
-        Lift.motor(40);
-      }
-      else if (dPad == 3){
-        Lift.motor(-40);
-      }
-      else if (dPad == 0){
-        Lift.motor(0);
-      }
-    }
-    //if none, implicit break
-    else{
-      digitalWrite(brake, LOW);  //remove power to the brakes to engage them.
-      ST1.motor(1,0);
-      ST1.motor(2,0);
-      Serial.println("implicit break condition");
-    }
-  }
-  //if E-STOP is triggered, stop immediately
-  else{
-    digitalWrite(brake, LOW);  //remove power to the brakes to engage them.
-    ST1.motor(1,0);
-    ST1.motor(2,0);
-  }
-  //flush remaining data on Bridge if any
-  p.flush();
-}
-/*
- * Read the two bridge values
- * If -1, stop
- * Otherwise, apply the values to the motors
- * Then, report the encoder values to Linux
- */
-/*
 void cueControlMode(){
-  Serial.println("cue control");
   readEncoders();
+  encoder1Reading = -1*encoder1Reading;
   if(digitalRead(buttonPin)==HIGH){
     p.println(-1);
-    p.println(encoder1Reading);
-    p.println(encoder2Reading);
     goFlag = true;
-    Serial.println("hit button!");
+    //switch1 = true;
+    while(!p.available()){}
+    getNextNum();
+    destination = getNextNum();
+    velocity = getNextNum();
   }
   if(goFlag){
-    if(p.available()){
-      int rightWheel = getNextNum();
-      int leftWheel = getNextNum();
-      ST1.motor(1,rightWheel);
-      ST1.motor(2,leftWheel);
-      if(rightWheel==0 && leftWheel==0){
-        goFlag = false;
-      }
-    }
+    K1.s(velocity);
+    K1.p(destination);
+    K2.s(velocity);
+    K2.p(destination);
   }
 }
-*/
 
-void cueControlMode(){
+
+/*
+void cueControlMode2(){
   //Serial.println("cue control");
   readEncoders();
   encoder1Reading = -1*encoder1Reading;
@@ -418,8 +273,10 @@ void cueControlMode(){
       Serial.println(leftWheel);
       //drive stuff
       digitalWrite(brake, HIGH);
+      
       ST1.motor(1,rightWheel *-1);
       ST1.motor(2,leftWheel);
+      
       if(rightWheel==0 && leftWheel==0){
         goFlag = false;
         digitalWrite(brake, LOW);
@@ -444,6 +301,7 @@ void cueControlMode(){
     Serial.println(encoder2Reading);
   }
 }
+*/
 /*
  * CODE GRAVEYARD
  * IN HONOR OF TIM
