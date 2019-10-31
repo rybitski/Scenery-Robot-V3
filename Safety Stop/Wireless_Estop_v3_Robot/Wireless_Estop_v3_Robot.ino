@@ -6,6 +6,7 @@
 Support:
   Wireless ESTOP rev 1 2018
   RC Platform v1.1 2019
+  Scenery Robot v3.1+
 ------------------------------------------------------------------------------------
   Use at your own risk
 
