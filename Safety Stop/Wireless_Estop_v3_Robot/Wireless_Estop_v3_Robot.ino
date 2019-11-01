@@ -2,11 +2,21 @@
   Wireless E Stop for scenery robot
   Adapted by Chris Rybitski 2018
   This code runs on the robot
-------------------------------------------------------------------------------------
-Support:
+  ------------------------------------------------------------------------------------
+  Support:
   Wireless ESTOP rev 1 2018
   RC Platform v1.1 2019
+<<<<<<< Updated upstream
 ------------------------------------------------------------------------------------
+=======
+  Scenery Robot v3.1+
+  ------------------------------------------------------------------------------------
+  Update Log:
+  10/31/19  Added output for D7 as secondary signal out
+            Changed delayAdjust pin to A2
+            Organized code and fixed overflow bug
+  ------------------------------------------------------------------------------------
+>>>>>>> Stashed changes
   Use at your own risk
 
   NRF24L01      Arduino
@@ -36,10 +46,11 @@ Support:
 
 const int button = 5;
 const int signalOUT = 6;
+const int signalOUT2 = 7;
 const int redLED = 4;
 const int blueLED = 2;
 const int greenLED = 3;
-const int delayPin = A5;    //analog pin for threshold adjustment
+const int delayPin = A2;    //analog pin for threshold adjustment
 bool LEDenable = true;      //controls LED output
 int timeOUT = 0;            //stores count
 int threshold = 500;          //decreases false positives, but increases reaction time
@@ -59,6 +70,7 @@ void setup() {
   pinMode(greenLED, OUTPUT);
   pinMode(button, INPUT);
   pinMode(signalOUT, OUTPUT);
+  pinMode(signalOUT2, OUTPUT);
 
   //turn LED off by default-----------------------
   digitalWrite(redLED, HIGH); //turn off red LED
@@ -82,7 +94,7 @@ void setup() {
   radio.startListening();                 // Start listening
   radio.setPALevel(RF24_PA_MAX);          // Set PA to max  RF24_PA_MIN = 0, RF24_PA_LOW, RF24_PA_HIGH, RF24_PA_MAX
   radio.printDetails();                   // Dump the configuration of the rf unit for debugging
-  
+
 
   //check to see if the LEDs should be turned off
   if (digitalRead(button) == HIGH) {  //disables LED output on Robot if jumper is present
@@ -95,7 +107,7 @@ void setup() {
 }
 
 void loop() {
-  
+
   byte pipeNo;
   byte gotByte;
 
@@ -103,34 +115,49 @@ void loop() {
     radio.read( &gotByte, 1 );
     radio.writeAckPayload(pipeNo, &gotByte, 1 );
     timeOUT = 0;                                  //message received, reset counter
+    Serial.println(gotByte);
   }
 
 
   if (gotByte == 42 && timeOUT < threshold) {
-    digitalWrite (signalOUT, HIGH);   //enable output
+    statusOK();
     gotByte = 1;    //reset message
-    
-    //only change the LED if the jumper was present at startup
-    if (LEDenable == true) {
-      digitalWrite(redLED, HIGH);       //turn off red LED
-      digitalWrite(greenLED, LOW);          //turn on green LED
-    }
-    
   }
+
   else {
     if (timeOUT > threshold)        //only diasble if threshold is exceeded
     {
-      digitalWrite (signalOUT, LOW);   //disable output
-      
-      //only change the LED if the jumper was present at startup
-      if (LEDenable == true) {
-        digitalWrite(greenLED, HIGH);    //turn off green LED
-        digitalWrite(redLED, LOW);      //turn on red LED
-      }
+      emergency();
     }
-    timeOUT++;                       //increment counter
-//   Serial.println(timeOUT);
-delay(1);
+
   }
 
+  if(timeOUT < 3000){               //Prevent overflow
+  timeOUT++;                        //increment counter
+  }
+  Serial.println(timeOUT);
+  delay(1);
+
+}
+
+void emergency() {
+  digitalWrite (signalOUT, LOW);   //disable output
+  digitalWrite (signalOUT2, LOW);   //disable output
+
+  //only change the LED if the jumper was present at startup
+  if (LEDenable == true) {
+    digitalWrite(greenLED, HIGH);    //turn off green LED
+    digitalWrite(redLED, LOW);      //turn on red LED
+  }
+}
+
+void statusOK() {
+  digitalWrite (signalOUT, HIGH);   //enable output
+  digitalWrite (signalOUT2, HIGH);   //enable output
+
+  //only change the LED if the jumper was present at startup
+  if (LEDenable == true) {
+    digitalWrite(redLED, HIGH);       //turn off red LED
+    digitalWrite(greenLED, LOW);          //turn on green LED
+  }
 }
