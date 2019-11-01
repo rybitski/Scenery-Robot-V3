@@ -83,15 +83,28 @@ def precalcDest(loc):
 def getAccelVel(accel, vel_now, enc_now, point):
     #new_vel = math.sqrt(vel_now**2.0 + 2.0*accel*(point-enc_now)/point)
     #new_vel = vel_now+1
-    vel_now+=0.1
-    new_vel = math.sqrt(vel_now**2.0 + 2.0*accel*enc_now)
-    return new_vel
+    #vel_now+=0.1
+    #new_vel = math.sqrt(vel_now**2.0 + 2.0*accel*enc_now)
+    #return new_vel
+    min_vel = 1
+    term = vel_now**2.0 + 2.0*accel*enc_now
+    if(term==0):
+        return min_vel
+    else:
+        return math.sqrt(term)
+    
 
 def getDecVel(accel, vel_now, enc_now, point):
     #new_vel = math.sqrt(vel_now**2.0 + 2.0*accel*(((dist-point)-(enc_now-point))/(dist-point)))
     #new_vel = vel_now+1
-    new_vel = math.sqrt(abs(vel_now**2.0 + 2.0*accel*(point-enc_now)))
-    return new_vel
+    #new_vel = math.sqrt(abs(vel_now**2.0 + 2.0*accel*(point-enc_now)))
+    #return new_vel
+    min_vel = vel_now
+    term = vel_now**2.0 + 2.0*accel*enc_now
+    if(term<0):
+        return min_vel
+    else:
+        return math.sqrt(term)
 
 def convertToLineUnit(units):
     return ((units*374)/(2.559*math.pi))
