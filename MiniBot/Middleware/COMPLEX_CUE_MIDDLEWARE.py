@@ -31,8 +31,8 @@ from time import sleep
 dist = 60 #in inches
 rot = 90 #in degrees
 acceleration = 3 #inches per second^2
-deceleration = -8
-velocity = 12 #inches per second
+deceleration = -2
+velocity = 6 #inches per second
 
 driveENC = 0
 
@@ -50,7 +50,7 @@ drive_flag = False
 turn_flag = False
 
 unit_tick = 1
-line_tick = 34/2.559*math.pi
+#line_tick = 34/2.559*math.pi
 
 def sendCommand(cmd):
     chars = []
@@ -81,13 +81,16 @@ def precalcDest(loc):
     return loc+dist
 
 def getAccelVel(accel, vel_now, enc_now, point):
-    new_vel = math.sqrt(vel_now**2.0 + 2.0*accel*(point-enc_now)/point)
+    #new_vel = math.sqrt(vel_now**2.0 + 2.0*accel*(point-enc_now)/point)
     #new_vel = vel_now+1
+    vel_now+=0.1
+    new_vel = math.sqrt(vel_now**2.0 + 2.0*accel*enc_now)
     return new_vel
 
 def getDecVel(accel, vel_now, enc_now, point):
-    new_vel = math.sqrt(vel_now**2.0 + 2.0*accel*(((dist-point)-(enc_now-point))/(dist-point)))
+    #new_vel = math.sqrt(vel_now**2.0 + 2.0*accel*(((dist-point)-(enc_now-point))/(dist-point)))
     #new_vel = vel_now+1
+    new_vel = math.sqrt(abs(vel_now**2.0 + 2.0*accel*(point-enc_now)))
     return new_vel
 
 def convertToLineUnit(units):
@@ -150,14 +153,14 @@ while(True):
             live_vel=velocity
         elif(drive_flag and driveENC>dec_beg and driveENC<dist):
             #deccelerate 
-            live_vel = getDecVel(deceleration, live_vel, driveENC, dec_beg)
+            live_vel = getDecVel(deceleration, live_vel, driveENC, dist)
             sendCommand([dec_metadata,convertToLineUnit(live_vel)])
             prev_driveENC = driveENC
-        elif(drive_flag and driveENC>dist):
-            velocity=0
-            sendCommand([dec_metadata, convertToLineUnit(velocity)])
-            live_vel=velocity
-            prev_driveENC = driveENC
+        #elif(drive_flag and driveENC>dist):
+        #    velocity=0
+        #    sendCommand([dec_metadata, convertToLineUnit(velocity)])
+        #    live_vel=velocity
+        #    prev_driveENC = driveENC
 
 
         #Send velocities for a turn
@@ -173,7 +176,7 @@ while(True):
             live_vel=velocity
         elif(drive_flag and driveENC>dec_beg and driveENC<dist):
             #deccelerate 
-            live_vel = getDecVel(deceleration, live_vel, driveENC, dec_beg)
+            live_vel = getDecVel(deceleration, live_vel, driveENC, dist)
             sendCommand([dec_metadata,convertToLineUnit(live_vel)])
             prev_driveENC = driveENC
         else:
@@ -181,6 +184,3 @@ while(True):
             sendCommand([dec_metadata, convertToLineUnit(velocity)])
             live_vel=velocity
             prev_driveENC = driveENC
-
-
-

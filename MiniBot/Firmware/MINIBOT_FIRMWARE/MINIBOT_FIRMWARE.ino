@@ -43,6 +43,9 @@ int destination = 0;
 int velocity = 0;
 int rotation = 0;
 
+int enc_reading = 0;
+int prev_enc_reading = 0;
+
 int prev_velocity = 0;
 //Linux Support ---------------------------------- 
 #include <Bridge.h>
@@ -75,8 +78,11 @@ void setup() {
   K1.start();
   K2.start();
 
-  K1.s(0);
-  K2.s(0);
+  K1.si(0);
+  K2.si(0);
+
+  K1.p(0);
+  K2.p(0);
 
   //K2.units(1, (34/2.559*3.14159));
 
@@ -198,7 +204,18 @@ void cueControlMode(){
     p.println(driveReading);
     Serial.print("Encoder position: ");
     Serial.println(driveReading);
+    
+    if(driveReading>=destination){
+      driveFlag = false;
+      turnFlag = true;
+      //K2.s(0);
+      //K1.p(rotation,0);
+      Serial.println("drive is complete");
+      p.println(-2); //we finished the drive, are now turning
+    }
+    
     while(!p.available()){Serial.print("waiting...");}
+    
     getNextNum(); //flush size bit
     metadata = getNextNum();
     Serial.print("metadata: ");
@@ -207,7 +224,7 @@ void cueControlMode(){
     Serial.print("velocity received is: ");
     Serial.println(velocity);
     if(velocity>0){
-      K2.s(velocity);
+      K2.p(destination,velocity);
       if(velocity>prev_velocity){
         digitalWrite(ledR, LOW);  
         digitalWrite(ledG, HIGH);
@@ -234,14 +251,9 @@ void cueControlMode(){
       }
     }
     prev_velocity = velocity;
+    prev_enc_reading = driveReading;
   }
-  if(driveReading>=destination){
-    driveFlag = false;
-    turnFlag = true;
-    K2.s(0);
-    //K1.p(rotation,0);
-    p.println(-2); //we finished the drive, are now turning
-  }
+  
   /*
   if(turnFlag){
     p.println(turnReading);

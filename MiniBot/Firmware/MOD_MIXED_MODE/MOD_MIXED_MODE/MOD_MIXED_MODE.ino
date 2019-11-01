@@ -29,8 +29,12 @@ int ledR = 11;             //common anode LED high=off low=on
 int ledG = 10;
 int ledB = 9;
 
+int pos=5000;
+
 void setup()
 {
+  //delay(5000);
+  
   SerialPort.begin(9600);
   SerialPort.listen();
 
@@ -53,15 +57,21 @@ void setup()
   
   Drive.si(0);
   Turn.si(0);
+  Drive.p(0);
+  Turn.p(0);
 }
 
 void loop()
 {
   // Drive 500 ticks (relative to where we are right now), then wait 1 second.
-  Drive.pi(5000).wait();
-  delay(1000);
+  //Drive.p(pos);
+  Drive.s(800);
+  pos+=5000;
+  
+  delay(20000);
  
   // Turn 500 ticks (relative to where we are right now), then wait 1 second.
   Turn.pi(5000).wait();  
   delay(1000);
+  
 }
