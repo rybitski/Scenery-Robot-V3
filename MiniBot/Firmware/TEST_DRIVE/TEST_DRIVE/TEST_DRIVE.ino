@@ -39,6 +39,8 @@ void setup()
   pinMode(ledG, OUTPUT);
   pinMode(ledB, OUTPUT);
 
+  Serial.begin(115200);
+
   digitalWrite(ledR, LOW);   //turn LEDs RED on startup
   digitalWrite(ledG, HIGH);
   digitalWrite(ledB, HIGH);
@@ -53,20 +55,13 @@ void setup()
   
   Drive.si(0);
   Turn.si(0);
+  Drive.p(0);
+  Turn.p(0);
+
+  Drive.p(2903,500);
 }
 
 void loop()
 {
-  digitalWrite(ledR, HIGH);   //turn LEDs RED on startup
-  digitalWrite(ledG, HIGH);
-  digitalWrite(ledB, HIGH);
-  
-  // Drive 500 ticks (relative to where we are right now), then wait 1 second.
-  Drive.p(374).wait();
-
-  digitalWrite(ledR, LOW);   //turn LEDs RED on startup
-  digitalWrite(ledG, LOW);
-  digitalWrite(ledB, LOW);
-  
-  delay(1000);
+  Serial.println(Drive.getP().value());
 }

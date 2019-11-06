@@ -107,7 +107,7 @@ def getDecVel(accel, vel_now, enc_now, point):
         return math.sqrt(term)
 
 def convertToLineUnit(units):
-    return ((units*374)/(2.559*math.pi))
+    return ((units*389)/(2.559*math.pi))
 
 def convertToCustomUnit(line_units):
     return (line_units*2.559*math.pi/374)
