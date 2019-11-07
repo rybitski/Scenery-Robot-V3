@@ -272,7 +272,7 @@ void cueControlMode(){
       K2.p(destination, velocity);
       Serial.println("Case 2");
     }
-    else if(driveReading > dec_beg and driveReading < destination){
+    else if(driveReading > dec_beg && driveReading < destination){
       velocity = getDecVel(deceleration, velocity, driveReading);
       K2.p(destination, velocity);
       Serial.println("Case 3");
