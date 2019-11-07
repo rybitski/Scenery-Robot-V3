@@ -35,10 +35,13 @@ deceleration = -2
 velocity = 6 #inches per second
 
 driveENC = 0
+turnENC = 0
 
 acc_end = 0
 dec_beg = 0
 endpt = 0
+
+endrot = 0
 
 live_vel = 0
 
@@ -48,6 +51,8 @@ dec_metadata = 5
 
 drive_flag = False
 turn_flag = False
+
+seed_vel = 1
 
 unit_tick = 1
 #line_tick = 34/2.559*math.pi
@@ -80,37 +85,14 @@ def getData():
 def precalcDest(loc):
     return loc+dist
 
-def getAccelVel(accel, vel_now, enc_now, point):
-    #new_vel = math.sqrt(vel_now**2.0 + 2.0*accel*(point-enc_now)/point)
-    #new_vel = vel_now+1
-    #vel_now+=0.1
-    #new_vel = math.sqrt(vel_now**2.0 + 2.0*accel*enc_now)
-    #return new_vel
-    min_vel = 1
-    term = vel_now**2.0 + 2.0*accel*enc_now
-    if(term==0):
-        return min_vel
-    else:
-        return math.sqrt(term)
-    
-
-def getDecVel(accel, vel_now, enc_now, point):
-    #new_vel = math.sqrt(vel_now**2.0 + 2.0*accel*(((dist-point)-(enc_now-point))/(dist-point)))
-    #new_vel = vel_now+1
-    #new_vel = math.sqrt(abs(vel_now**2.0 + 2.0*accel*(point-enc_now)))
-    #return new_vel
-    min_vel = vel_now
-    term = vel_now**2.0 + 2.0*accel*enc_now
-    if(term<0):
-        return min_vel
-    else:
-        return math.sqrt(term)
+def precalcRot(loc):
+    return loc+rot
 
 def convertToLineUnit(units):
     return ((units*389)/(2.559*math.pi))
 
 def convertToCustomUnit(line_units):
-    return (line_units*2.559*math.pi/374)
+    return (line_units*2.559*math.pi/389)
 
 pinFlag = False
 
@@ -128,14 +110,26 @@ while(True):
         driveENC = convertToCustomUnit(getData())
         endpt = precalcDest(driveENC)
 
-        accTime = velocity / acceleration
-        acc_end = (velocity/2) * accTime 
+        #turnENC = convertToCustomUnit(getData())
+        #endrot = precalcRot(turnENC)
+        endrot = rot
 
-        decTime = velocity / deceleration*-1
-        dec_beg = endpt - ((velocity/2) * decTime) #mult by 2 could be an issue...
+        #accTime = velocity / acceleration
+        #acc_end = (velocity/2) * accTime 
+
+        #decTime = velocity / deceleration*-1
+        #dec_beg = endpt - ((velocity/2) * decTime) #mult by 2 could be an issue...
+
+        #acc_end = ((velocity+seed_vel)/2.0)*((velocity-seed_vel)/acceleration)
+        #dec_beg = endpt-(((0+velocity)/2.0)*((0-velocity)/deceleration))
+
+
+        acc_end = (velocity**2)/(2*acceleration)
+        dec_beg = endpt - (velocity**2)/(-2*deceleration)
+
         arduinoReading=0
 
-        sendCommand([convertToLineUnit(endpt),convertToLineUnit(velocity),convertToLineUnit(rot), convertToLineUnit(acceleration), convertToLineUnit(deceleration), convertToLineUnit(acc_end), convertToLineUnit(dec_beg)])
+        sendCommand([convertToLineUnit(endpt),convertToLineUnit(velocity),convertToLineUnit(endrot), convertToLineUnit(acceleration), convertToLineUnit(deceleration), convertToLineUnit(acc_end), convertToLineUnit(dec_beg),convertToLineUnit(seed_vel)])
 
     if(pinFlag):
         flag = getData()

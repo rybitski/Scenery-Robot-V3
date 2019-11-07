@@ -39,20 +39,20 @@ bool driveFlag = false;
 bool turnFlag = false;
 
 int destination = 0;
-int max_velocity = 0;
+float max_velocity = 0;
 int rotation = 0;
 int acceleration = 0;
 int deceleration = 0;
-int seed_velocity = 0;
+float seed_velocity = 0;
 
-int velocity = 0;
+float velocity = 0;
 int acc_end = 0;
 int dec_beg = 0;
 
 int enc_reading = 0;
 int prev_enc_reading = 0;
 
-int prev_velocity = 0;
+float prev_velocity = 0;
 //Linux Support ---------------------------------- 
 #include <Bridge.h>
 #include <stdio.h>
@@ -180,21 +180,25 @@ bool updateCMDCode(){
 }
 
 
-float getAccelVel(acc, vel, enc){
-  int min_vel = seed_velocity;
-  float term = (vel*vel)+2.0*acc*enc;
+float getAccelVel(int acc, float vel, int enc){
+  float min_vel = seed_velocity;
+  float term = sq(vel)+(2.0*acc*enc);
   if(term==0){
     return min_vel;  
   }
+  //else if (term>max_velocity){
+   // return max_velocity; //bandaid solution
+  //}
   else{
     return sqrt(term);
   }
 }
 
 
-float getDecVel(acc, vel, enc){
-  int min_vel = vel;
-  float term = (vel*vel)+2.0*acc*enc;
+float getDecVel(int acc, float vel, int enc){
+  float min_vel = vel;
+  float term = sq(vel)+(2.0*acc*(enc-dec_beg));
+  Serial.println(term);
   if(term<0){
     return min_vel;  
   }
@@ -210,7 +214,8 @@ void cueControlMode(){
   int metadata = 0;
   if(digitalRead(buttonPin)==HIGH){
     p.println(-1);
-    
+    p.println(driveReading);
+    //p.println(turnReading);
     driveFlag = true;
     turnFlag = false;
     while(!p.available()){Serial.print("waiting...");}
@@ -224,10 +229,27 @@ void cueControlMode(){
     acc_end = getNextNum();
     dec_beg = getNextNum();
     seed_velocity = getNextNum();
+
     
     Serial.print("Destination is: ");
     Serial.print(destination);
     Serial.println(" ticks");
+
+    Serial.print("Max velocity is: ");
+    Serial.println(max_velocity);
+    Serial.print("Rotation is: ");
+    Serial.println(rotation);
+    Serial.print("Acceleration is: ");
+    Serial.println(acceleration);
+    Serial.print("Deceleration is: ");
+    Serial.println(deceleration);
+    Serial.print("Acc_end is: ");
+    Serial.println(acc_end);
+    Serial.print("Dec_beg is: ");
+    Serial.println(dec_beg);
+    Serial.print("Seed_vel is: ");
+    Serial.println(seed_velocity);
+    
     
     //K2.s(velocity);
     K2.p(destination,velocity);
@@ -241,16 +263,19 @@ void cueControlMode(){
     Serial.println(driveReading);
 
     if(driveReading < acc_end){
-      velocity = getAccVel(acceleration, velocity, driveReading);      
+      velocity = getAccelVel(acceleration, velocity, driveReading);      
       K2.p(destination,velocity);
+      Serial.println("Case 1");
     }
     else if(driveReading > acc_end && driveReading < dec_beg){
       velocity = max_velocity;
       K2.p(destination, velocity);
+      Serial.println("Case 2");
     }
-    else if(driveReading > dec_beg){
-      velocity = getDecVel(decerlation, velocity, driveReading);
+    else if(driveReading > dec_beg and driveReading < destination){
+      velocity = getDecVel(deceleration, velocity, driveReading);
       K2.p(destination, velocity);
+      Serial.println("Case 3");
     }
     else if(driveReading >= destination){
       velocity = 0;
@@ -258,7 +283,11 @@ void cueControlMode(){
       turnFlag = true;
       Serial.println("drive is complete");
       p.println(-2);
+      Serial.println("Case 4");
     }
+
+    Serial.print("Velocity is: ");
+    Serial.println(velocity);
     
     //diagnostics:
     if(velocity > prev_velocity){
@@ -283,7 +312,7 @@ void cueControlMode(){
   } 
   else if(turnFlag){
     Serial.println("turning...");
-    K1.p(rot).wait(); //THIS IS VERY VBRY BAD!!!
+    K1.pi(rotation/16.0).wait(); //THIS IS VERY VBRY BAD!!!
     Serial.println("turn is complete");
     turnFlag = false;
     p.println(-3);
