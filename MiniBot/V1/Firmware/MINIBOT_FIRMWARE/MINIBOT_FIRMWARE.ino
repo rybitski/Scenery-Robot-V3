@@ -78,6 +78,9 @@ void setup() {
   K1.start();
   K2.start();
 
+  K1.streaming(true);
+  K2.streaming(true);
+  
   K1.si(0);
   K2.si(0);
 
