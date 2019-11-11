@@ -21,18 +21,18 @@ Good things to know about communication with the Arduino environment:
 #setup------------------------
 import sys
 import os
-#import requests
+import requests
 import math
-#sys.path.insert(0, '/usr/lib/python2.7/bridge')
+sys.path.insert(0, '/usr/lib/python2.7/bridge')
 from time import sleep
-#from bridgeclient import BridgeClient as bridgeclient
-#value = bridgeclient()
+from bridgeclient import BridgeClient as bridgeclient
+value = bridgeclient()
 
-dist = 60 #in inches
+dist = 120 #in inches
 rot = 90 #in degrees
 acceleration = 3 #inches per second^2
-deceleration = -2
-velocity = 6 #inches per second
+deceleration = -4
+velocity = 12 #inches per second
 
 driveENC = 0
 turnENC = 0
@@ -89,10 +89,10 @@ def precalcRot(loc):
     return loc+rot
 
 def convertToLineUnit(units):
-    return ((units*389)/(2.559*math.pi))
+    return ((units*387)/(2.559*math.pi))
 
 def convertToCustomUnit(line_units):
-    return (line_units*2.559*math.pi/389)
+    return (line_units*2.559*math.pi/387)
 
 pinFlag = False
 
@@ -120,12 +120,13 @@ while(True):
         #decTime = velocity / deceleration*-1
         #dec_beg = endpt - ((velocity/2) * decTime) #mult by 2 could be an issue...
 
-        #acc_end = ((velocity+seed_vel)/2.0)*((velocity-seed_vel)/acceleration)
-        #dec_beg = endpt-(((0+velocity)/2.0)*((0-velocity)/deceleration))
+        
+        acc_end = ((velocity+seed_vel)/2.0)*((velocity-seed_vel)/acceleration)
+        dec_beg = endpt-(((0+velocity)/2.0)*((0-velocity)/deceleration))
 
 
-        acc_end = (velocity**2)/(2*acceleration)
-        dec_beg = endpt - (velocity**2)/(-2*deceleration)
+        #acc_end = (velocity**2)/(2*acceleration)
+        #dec_beg = endpt - (velocity**2)/(-2*deceleration)
 
         arduinoReading=0
 
