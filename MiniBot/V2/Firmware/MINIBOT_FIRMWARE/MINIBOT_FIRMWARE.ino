@@ -64,7 +64,7 @@ void setup() {
   //Serial configuration
   Serial.begin(115200);
   //while(!Serial); //comment this line to remove the pause
-  Serial.println("starting setup...");
+  //Serial.println("starting setup...");
   
   SWSerial.begin(9600);             //start sabertooth with software serial
   Sabertooth::autobaud(SWSerial);
@@ -95,25 +95,25 @@ void setup() {
 
   //K2.units(1, (34/2.559*3.14159));
 
-  Serial.println("Finished KANG Setup");
+  //Serial.println("Finished KANG Setup");
 
   // Misc -------------------
   pinMode(buttonPin, INPUT);
   
   // Start using the Bridge and Python script
-  Serial.println("Starting bridge...");
+  //Serial.println("Starting bridge...");
   Bridge.begin();
 
-  Serial.println("running python script...");
+  //Serial.println("running python script...");
   p.runShellCommandAsynchronously("python -u /usr/lib/andyCode/COMPLEX_CUE_MIDDLEWARE.py");
-  Serial.println("command sent!");
+  //Serial.println("command sent!");
 
-  Serial.println("waiting for data influx...");
+  //Serial.println("waiting for data influx...");
   digitalWrite(ledG, LOW); //turn LEDs YELLOW while waiting
   while(!p.available());
 
   digitalWrite(ledR, HIGH);   //turn LEDs GREEN when leaving setup
-  Serial.println("setup complete");
+  //Serial.println("setup complete");
 }
 
 /*
@@ -172,7 +172,7 @@ bool updateCMDCode(){
   if(packetSize==1){ //command packets have length 1 after size
     if(p.available()){
       commandCode = p.parseInt()/100.0;
-      Serial.println("updated command code");
+      //Serial.println("updated command code");
       return true;
     }
   }
@@ -182,7 +182,7 @@ bool updateCMDCode(){
 
 float getAccelVel(int acc, float vel, int enc){
   float min_vel = seed_velocity;
-  float term = sq(vel)+(2.0*acc*enc);
+  float term = sq(vel)+(2.0*acc*(enc-prev_enc_reading));
   if(term==0){
     return min_vel;  
   }
@@ -197,8 +197,9 @@ float getAccelVel(int acc, float vel, int enc){
 
 float getDecVel(int acc, float vel, int enc){
   float min_vel = vel;
-  float term = sq(vel)+(2.0*acc*(enc-dec_beg));
-  Serial.println(term);
+  //float term = sq(vel)+(2.0*acc*(enc-dec_beg));
+  float term = sq(vel)+(2.0*acc*(enc-prev_enc_reading));
+  //Serial.println(term);
   if(term<0){
     return min_vel;  
   }
@@ -259,34 +260,35 @@ void cueControlMode(){
   }
   if(driveFlag){
     p.println(driveReading);
-    Serial.print("Encoder position: ");
-    Serial.println(driveReading);
+    //Serial.print("Encoder position: ");
+    Serial.print(driveReading);
+    Serial.print(",");
 
     if(driveReading < acc_end){
       velocity = getAccelVel(acceleration, velocity, driveReading);      
       K2.p(destination,velocity);
-      Serial.println("Case 1");
+      //Serial.println("Case 1");
     }
     else if(driveReading > acc_end && driveReading < dec_beg){
       velocity = max_velocity;
       K2.p(destination, velocity);
-      Serial.println("Case 2");
+      //Serial.println("Case 2");
     }
     else if(driveReading > dec_beg && driveReading < destination){
       velocity = getDecVel(deceleration, velocity, driveReading);
       K2.p(destination, velocity);
-      Serial.println("Case 3");
+      //Serial.println("Case 3");
     }
     else if(driveReading >= destination){
       velocity = 0;
       driveFlag = false;
       turnFlag = true;
-      Serial.println("drive is complete");
+      //Serial.println("drive is complete");
       p.println(-2);
-      Serial.println("Case 4");
+      //Serial.println("Case 4");
     }
 
-    Serial.print("Velocity is: ");
+    //Serial.print("Velocity is: ");
     Serial.println(velocity);
     
     //diagnostics:
@@ -294,29 +296,30 @@ void cueControlMode(){
       digitalWrite(ledR, LOW);  
       digitalWrite(ledG, HIGH);
       digitalWrite(ledB, HIGH);
-      Serial.println("Accelerating!");
+      //Serial.println("Accelerating!");
     }
     else if( velocity == prev_velocity){
       digitalWrite(ledR, HIGH);  
       digitalWrite(ledG, LOW);
       digitalWrite(ledB, HIGH);
-      Serial.println("Crusing!");
+      //Serial.println("Crusing!");
     }
     else{
       digitalWrite(ledR, HIGH);  
       digitalWrite(ledG, HIGH);
       digitalWrite(ledB, LOW);
-      Serial.println("Decelerating!");
+      //Serial.println("Decelerating!");
     }
     prev_velocity = velocity;
   } 
   else if(turnFlag){
-    Serial.println("turning...");
-    K1.pi(rotation/16.0).wait(); //THIS IS VERY VBRY BAD!!!
-    Serial.println("turn is complete");
+    //Serial.println("turning...");
+    K1.pi(rotation/15.0).wait(); //THIS IS VERY VBRY BAD!!!
+    //Serial.println("turn is complete");
     turnFlag = false;
     p.println(-3);
  }
+ prev_enc_reading = driveReading;
 }
 
 /*
