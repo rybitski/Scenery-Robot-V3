@@ -21,18 +21,15 @@ Good things to know about communication with the Arduino environment:
 #setup------------------------
 import sys
 import os
-import requests
+#import requests
 import math
-sys.path.insert(0, '/usr/lib/python2.7/bridge')
+#sys.path.insert(0, '/usr/lib/python2.7/bridge')
 from time import sleep
-from bridgeclient import BridgeClient as bridgeclient
-value = bridgeclient()
+#from bridgeclient import BridgeClient as bridgeclient
+#value = bridgeclient()
+import json
 
-dist = 120 #in inches
-rot = 90 #in degrees
-acceleration = 3 #inches per second^2
-deceleration = -4
-velocity = 12 #inches per second
+cuesList = []
 
 driveENC = 0
 turnENC = 0
@@ -53,9 +50,104 @@ drive_flag = False
 turn_flag = False
 
 seed_vel = 1
-
 unit_tick = 1
-#line_tick = 34/2.559*math.pi
+
+example = '''
+{
+    "1": [[1,2,3,4,5],[1,2,3,4,5],[1,2,3,4,5]],
+    "2": [[1,2,3,4,5],[1,2,3,4,5],[1,2,3,4,5]],
+    "robots": 1
+}
+'''
+class stageVector(object):
+    #Constructor
+    def __init__(self, dist, theta, accel, maxSpeed, decel):
+        self.distance = dist
+        self.angle = theta
+        self.accel = accel
+        self.decel = decel
+        self.maxSpeed = maxSpeed
+    #Makeshift alternate constructor
+    def makeFromPoints(self, x1, y1, x2, y2, acc, dec, vel):
+        self.distance = math.sqrt((abs(x2 - x1) ** 2) + abs(y2 - y1) ** 2)
+        self.angle = (180 / math.pi) * (math.atan(abs(x2 - x1) / self.distance))
+        self.accel = acc
+        self.decel = dec
+        self.maxSpeed = vel
+    #Getters
+    def get_distance(self):
+        return self.distance
+    def get_angle(self):
+        return self.angle
+    def get_maxSpeed(self):
+        return self.maxSpeed
+    def get_accel(self):
+        return self.accel
+    def get_decel(self):
+        return self.decel
+
+class stageCue(object):
+    #Constructor
+    def __init__(self, id):
+        self.vectorList = []
+        self.cueID = id
+    #push a vector to the list
+    def appendVector(self, stageVec):
+        self.vectorList.append(stageVec)
+    #returns a list of the vectors
+    def getVectorsInCue(self):
+        return self.vectorList
+    def popVector(self):
+        return self.vectorList.pop()
+    def popThisVector(self, loc):
+        return self.vectorList.pop(loc)
+    def appendVectorList(self, newVecList):
+        for sv in newVecList:
+            self.vectorList.appendVector(sv)
+    def addVectorAtLocation(self, loc, vec):
+        self.vectorList.add(loc,vec)
+    def getID(self):
+        return self.cueID
+    def setID(self, newID):
+        self.cueID = newID
+
+class stageCueList(object):
+    #Constructor
+    def __init__(self, id):
+        self.cueList = []
+        self.listID = id
+    def appendCue(self, stageQ):
+        self.cueList.append(stageQ)
+    def getCuesInList(self):
+        return self.cueList
+    def popCue(self):
+        return self.cueList.pop()
+    def popThisCue(self, loc):
+        return self.cueList.pop(loc)
+    def appendCueList(self, newCueList):
+        for q in newCueList:
+            self.cueList.appendCue(q)
+    def addCueAtLocation(self, loc, q):
+        self.cueList.add(loc,q)
+    def getCueAtLocation(self, loc):
+        allCues = self.cueList
+        return allCues[loc]
+    def getID(self):
+        return self.listID
+    def setID(self, newID):
+        self.listID = newID
+
+def parseJson(source):
+    jsonDict = json.loads(source)
+    for key in jsonDict.keys():
+        if key != "robots":
+            cue = stageCue(int(key))
+            for item in jsonDict[key]:
+                vector = stageVector(item[0], item[1], item[2], item[3], item[4])
+                cue.appendVector(vector)
+            cuesList.append(cue)
+            #print(cuesList)
+    return cuesList
 
 def sendCommand(cmd):
     chars = []
@@ -76,8 +168,6 @@ def sendCommand(cmd):
 
 def getData():
     inputA = sys.stdin.readline()
-    #inputA = inputA.rstrip('\n')
-    #inputA = inputA.strip()
     inputA = float(inputA)
 
     return inputA
@@ -96,6 +186,22 @@ def convertToCustomUnit(line_units):
 
 pinFlag = False
 
+parseJson(example)
+
+cue = cuesList.pop()
+vect = cue.popVector()
+
+dist = vect.get_distance()
+rot = vect.get_angle()
+acceleration = vect.get_accel()
+deceleration = vect.get_decel()
+velocity = vect.get_maxSpeed()
+
+#dist = 120 #in inches
+#rot = 90 #in degrees
+#acceleration = 3 #inches per second^2
+#deceleration = -4
+#velocity = 12 #inches per second
 
 sendCommand("4")
 
@@ -109,24 +215,10 @@ while(True):
         drive_flag = True
         driveENC = convertToCustomUnit(getData())
         endpt = precalcDest(driveENC)
-
-        #turnENC = convertToCustomUnit(getData())
-        #endrot = precalcRot(turnENC)
         endrot = rot
 
-        #accTime = velocity / acceleration
-        #acc_end = (velocity/2) * accTime 
-
-        #decTime = velocity / deceleration*-1
-        #dec_beg = endpt - ((velocity/2) * decTime) #mult by 2 could be an issue...
-
-        
         acc_end = ((velocity+seed_vel)/2.0)*((velocity-seed_vel)/acceleration)
         dec_beg = endpt-(((0+velocity)/2.0)*((0-velocity)/deceleration))
-
-
-        #acc_end = (velocity**2)/(2*acceleration)
-        #dec_beg = endpt - (velocity**2)/(-2*deceleration)
 
         arduinoReading=0
 
@@ -148,7 +240,20 @@ while(True):
                 prev_driveENC = 0
             elif(flag==-3): #completed the turn
                 turn_flag = False
-                pinFlag = False
+
+                if(len(cue.getVectorsInCue)>0):
+                    cue = cuesList.pop()
+                    vect = cue.popVector()
+
+                    dist = vect.get_distance()
+                    rot = vect.get_angle()
+                    acceleration = vect.get_accel()
+                    deceleration = vect.get_decel()
+                    velocity = vect.get_maxSpeed()
+                else:
+                    pinFlag = False
+                    ddrive_flag = True
+
 
         else:
             driveENC = convertToCustomUnit(flag)
