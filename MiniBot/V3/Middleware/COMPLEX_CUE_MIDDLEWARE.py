@@ -52,10 +52,13 @@ turn_flag = False
 seed_vel = 1
 unit_tick = 1
 
+current_cue = 0
+current_vector = 0
+
 example = '''
 {
-    "1": [[1,2,3,4,5],[1,2,3,4,5],[1,2,3,4,5]],
-    "2": [[1,2,3,4,5],[1,2,3,4,5],[1,2,3,4,5]],
+    "1": [[1,2,3,4,-1],[1,2,3,4,-1],[1,2,3,4,-1]],
+    "2": [[1,2,3,4,-1],[1,2,3,4,-1],[1,2,3,4,-1]],
     "robots": 1
 }
 '''
@@ -188,11 +191,11 @@ pinFlag = False
 
 parseJson(example)
 
-cue = cuesList.pop()
-vect = cue.popVector()
+cue = cuesList.pop(0)
+vect = cue.popThisVector(0)
 
-dist = vect.get_distance()
-rot = vect.get_angle()
+dist = vect.get_distance()*12
+rot = vect.get_angle()*12
 acceleration = vect.get_accel()
 deceleration = vect.get_decel()
 velocity = vect.get_maxSpeed()
@@ -211,6 +214,7 @@ while(True):
 
     #if go pin was pressed
     if(arduinoReading==-1):
+
         pinFlag = True
         drive_flag = True
         driveENC = convertToCustomUnit(getData())
@@ -241,18 +245,44 @@ while(True):
             elif(flag==-3): #completed the turn
                 turn_flag = False
 
-                if(len(cue.getVectorsInCue)>0):
-                    cue = cuesList.pop()
-                    vect = cue.popVector()
+                if(current_vector < (len(cue.getVectorsInCue()))-1):
+                    current_vector += 1
+                    vect = cue.popThisVector(current_vector)
 
                     dist = vect.get_distance()
                     rot = vect.get_angle()
                     acceleration = vect.get_accel()
                     deceleration = vect.get_decel()
                     velocity = vect.get_maxSpeed()
+
+                    driveENC = convertToCustomUnit(getData())
+                    endpt = precalcDest(driveENC)
+                    endrot = rot
+
+                    acc_end = ((velocity+seed_vel)/2.0)*((velocity-seed_vel)/acceleration)
+                    dec_beg = endpt-(((0+velocity)/2.0)*((0-velocity)/deceleration))
+
+                    sendCommand([convertToLineUnit(endpt),convertToLineUnit(velocity),convertToLineUnit(endrot), convertToLineUnit(acceleration), convertToLineUnit(deceleration), convertToLineUnit(acc_end), convertToLineUnit(dec_beg),convertToLineUnit(seed_vel)])
                 else:
                     pinFlag = False
-                    ddrive_flag = True
+                    drive_flag = True
+
+                    current_cue += 1
+                    current_vector = 0
+                    
+                    cue = cuesList.pop(current_cue)
+                    vect = cue.popThisVector(current_vector)
+
+                    dist = vect.get_distance()*12
+                    rot = vect.get_angle()*12
+                    acceleration = vect.get_accel()
+                    deceleration = vect.get_decel()
+                    velocity = vect.get_maxSpeed()
+
+                    sendCommand([9])
+
+
+
 
 
         else:

@@ -53,6 +53,8 @@ int enc_reading = 0;
 int prev_enc_reading = 0;
 
 float prev_velocity = 0;
+
+bool runVect = false;
 //Linux Support ---------------------------------- 
 #include <Bridge.h>
 #include <stdio.h>
@@ -213,14 +215,19 @@ float getDecVel(int acc, float vel, int enc){
 void cueControlMode(){
   readEncoders();
   int metadata = 0;
-  if(digitalRead(buttonPin)==HIGH){
+  if(digitalRead(buttonPin)==HIGH || runVect){
+    Serial.println("Button Pressed or next vec");
     p.println(-1);
     p.println(driveReading);
+    Serial.println("-1");
+    Serial.println(driveReading);
     //p.println(turnReading);
     driveFlag = true;
     turnFlag = false;
-    while(!p.available()){Serial.print("waiting...");}
-    getNextNum(); //flush the length out
+    while(!p.available()){Serial.print("waiting for cue data...");}
+    if(!runVect){
+      getNextNum(); //flush the length out
+    }
     destination = getNextNum();
     max_velocity = getNextNum();
     velocity = 0; 
@@ -261,8 +268,8 @@ void cueControlMode(){
   if(driveFlag){
     p.println(driveReading);
     //Serial.print("Encoder position: ");
-    Serial.print(driveReading);
-    Serial.print(",");
+    Serial.println(driveReading);
+    //Serial.print(",");
 
     if(driveReading < acc_end){
       velocity = getAccelVel(acceleration, velocity, driveReading);      
@@ -285,11 +292,13 @@ void cueControlMode(){
       turnFlag = true;
       //Serial.println("drive is complete");
       p.println(-2);
+      Serial.println("-2");
+      
       //Serial.println("Case 4");
     }
 
     //Serial.print("Velocity is: ");
-    Serial.println(velocity);
+    //Serial.println(velocity);
     
     //diagnostics:
     if(velocity > prev_velocity){
@@ -312,12 +321,26 @@ void cueControlMode(){
     }
     prev_velocity = velocity;
   } 
-  else if(turnFlag){
+  if(turnFlag){
     //Serial.println("turning...");
-    K1.pi(rotation/15.0).wait(); //THIS IS VERY VBRY BAD!!!
+    K1.pi(rotation/15.0).wait(); //THIS IS VERY BAD!!!
     //Serial.println("turn is complete");
     turnFlag = false;
     p.println(-3);
+    Serial.println("-3");
+    p.print(driveReading);
+    Serial.println(driveReading);
+    //while(!p.available()){Serial.print("waiting for complete confirmation...");}
+    Serial.println("sanity check");
+    int len = getNextNum(); //flush the length out
+    if (len>1){
+      //run next vector setup code
+      runVect = true;
+    }
+    else{
+      //done with this cue, cleanup
+      runVect = false;
+    }
  }
  prev_enc_reading = driveReading;
 }
