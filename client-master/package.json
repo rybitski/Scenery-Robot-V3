@@ -10,7 +10,7 @@
     "react-gamepad": "^1.0.3",
     "react-load-script": "0.0.6",
     "react-router-dom": "^4.3.1",
-    "react-scripts": "2.1.5",
+    "react-scripts": "5.0.1",
     "save": "^2.3.3"
   },
   "scripts": {
